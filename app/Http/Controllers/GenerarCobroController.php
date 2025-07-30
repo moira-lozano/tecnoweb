@@ -70,7 +70,7 @@ class GenerarCobroController extends Controller
             ]);
 
             $laResult = json_decode($loResponse->getBody()->getContents());
-dd($laResult);
+//dd($laResult);
             if ($request->tnTipoServicio == 1) {
 
                 $csrfToken = csrf_token();
@@ -150,7 +150,60 @@ dd($laResult);
                         'total' =>  $detalle['Total'],
                     ]);
                 }
+            } elseif ($request->tnTipoServicio == 3) {
+            // Crear o buscar usuario por correo
+            $user = User::where('email', $request->tcCorreo)->first();
+            if (!$user) {
+                $user = User::create([
+                    'name' => $request->name,
+                    'cedula' => $request->cedula,
+                    'celular' => $request->tnTelefono,
+                    'email' => $request->tcCorreo,
+                    'password' => 'null',
+                ]);
+                $user->roles()->attach(1); // cliente
             }
+
+            // Crear nuevo ID de venta
+            do {
+                $nroVenta = rand(100000, 999999);
+                $ventaExistente = Venta::where('id', $nroVenta)->exists();
+            } while ($ventaExistente);
+
+            // Crear registro de Pago
+            Pago::create([
+                'id' => $nroPago,
+                'fechapago' => now(),
+                'estado' => 1,
+                'metodopago' => 3, // Efectivo
+            ]);
+
+            Venta::create([
+                'id' => $nroVenta,
+                'user_id' => $user->id,
+                'pago_id' => $nroPago,
+                'fecha' => now(),
+                'metodopago' => 3, // Efectivo
+                'montototal' => $request->tnMonto,
+                'estado' => 1, // Pendiente hasta pagar
+            ]);
+
+            foreach ($request->taPedidoDetalle as $detalle) {
+                DetalleVenta::create([
+                    'venta_id' => $nroVenta,
+                    'producto_id' => $detalle['id'],
+                    'cantidad' => $detalle['cantidad'],
+                    'total' => $detalle['total'],
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Venta registrada con éxito para pago en efectivo.',
+                'venta_id' => $nroVenta,
+            ]);
+        }
+
         } catch (\Throwable $th) {
 
             return $th->getMessage() . " - " . $th->getLine();

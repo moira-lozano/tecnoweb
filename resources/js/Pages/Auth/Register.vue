@@ -8,6 +8,9 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 
 const form = useForm({
     name: '',
+    cedula:'',
+    celular: '',
+    direccion: '',
     email: '',
     password: '',
     password_confirmation: '',
@@ -20,13 +23,14 @@ const submit = () => {
 };
 </script>
 
+
 <template>
     <GuestLayout>
         <Head title="Register" />
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="name" value="Name" />
+                <InputLabel for="name" value="Nombre" />
 
                 <TextInput
                     id="name"
@@ -41,20 +45,62 @@ const submit = () => {
                 <InputError class="mt-2" :message="form.errors.name" />
             </div>
 
+            <!-- Cédula -->
             <div class="mt-4">
-                <InputLabel for="email" value="Email" />
-
-                <TextInput
-                    id="email"
-                    type="email"
+                <InputLabel for="cedula" value="Cédula" />
+                <TextInput  
+                    id="cedula"
+                    type="text"
                     class="mt-1 block w-full"
-                    v-model="form.email"
+                    v-model="form.cedula"
                     required
-                    autocomplete="username"
+                    autocomplete="cedula"
                 />
-
-                <InputError class="mt-2" :message="form.errors.email" />
+                <InputError class="mt-2" :message="form.errors.cedula" />
             </div>
+
+            <!-- Celular -->
+            <div class="mt-4">
+                <InputLabel for="celular" value="Teléfono" />
+                <TextInput
+                    id="celular"
+                    type="text"
+                    class="mt-1 block w-full"
+                    v-model="form.celular"
+                    required
+                    autocomplete="celular"
+                />
+                <InputError class="mt-2" :message="form.errors.celular" />
+            </div>
+
+            <!-- Dirección -->
+            <div class="mt-4">
+                <InputLabel for="direccion" value="Dirección" />
+                <TextInput
+                    id="direccion"
+                    type="text"
+                    class="mt-1 block w-full"
+                    v-model="form.direccion"
+                    required
+                    autocomplete="direccion"
+                />
+                <InputError class="mt-2" :message="form.errors.direccion" />
+            </div>
+
+                <div class="mt-4">
+                    <InputLabel for="email" value="Email" />
+
+                    <TextInput
+                        id="email"
+                        type="email"
+                        class="mt-1 block w-full"
+                        v-model="form.email"
+                        required
+                        autocomplete="username"
+                    />
+
+                    <InputError class="mt-2" :message="form.errors.email" />
+                </div>
 
             <div class="mt-4">
                 <InputLabel for="password" value="Password" />

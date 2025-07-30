@@ -247,6 +247,7 @@ const actualizarDatos = () => {
         >
           <option value="1">Servicio QR</option>
           <option value="2">Tigo Money</option>
+          <option value="3">Efectivo</option>
         </select>
         <p v-if="form.errors.tnTipoServicio" class="text-sm text-red-500 mt-2">{{ form.errors.tnTipoServicio }}</p>
       </div>
