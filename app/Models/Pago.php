@@ -14,7 +14,8 @@ class Pago extends Model
 // App\Models\Pago.php
 public function venta()
 {
-    return $this->hasOne(Venta::class);
+    return $this->belongsTo(Venta::class);
 }
+
 
 }

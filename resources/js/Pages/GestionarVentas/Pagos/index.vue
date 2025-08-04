@@ -51,12 +51,12 @@ const onDeleteSuccess = (e) => {
                           <td style="text-align: center;">{{ pago.fechapago }}</td>
                           <td
                             style="text-align: center;"
-                            :style="{ color: pago.estado === 2 ? 'green' : 'red' }"
+                            :style="{ color: pago.estado === 2 ? 'green' : 'grease' }"
                           >
-                            {{ pago.estado === 2 ? 'Pagado' : 'No cancelado' }}
+                            {{ pago.estado === 2 ? 'Pagado' : 'Pendiente' }}
                           </td>
                           <td style="text-align: center;">
-                            {{ pago.metodopago == '4' ? 'Pago QR' : 'Pago Tigo Money' }}
+                            {{ pago.metodopago == '3' ? 'Efectivo' : 'Pago QR' }}
                           </td>
                         </tr>
                       </tbody>

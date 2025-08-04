@@ -63,13 +63,9 @@
       
       <!-- Botón de pagar -->
       <div class="mt-4 flex justify-end">
-        <Link
-          :href="route('landing.pagos.create')"
-          @click="emitirCompra"
-          class="inline-block px-6 py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-700 transition duration-300"
-        >
-          Ir a Pagar
-        </Link>
+        <button @click="irAPagar()" class="bg-blue-600 text-white px-4 py-2 rounded">
+          Pagar
+        </button>
       </div>
     </div>
     <div v-else class="text-gray-500 dark:text-gray-400 mt-4 text-center py-8">
@@ -81,7 +77,7 @@
 
 <script setup>
 import { defineProps, defineEmits } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { router } from '@inertiajs/vue3';
 
 const props = defineProps({
   carrito: {
@@ -92,21 +88,9 @@ const props = defineProps({
 
 const emit = defineEmits(['aumentar', 'disminuir', 'quitar', 'comprar']);
 
-const aumentar = (item) => {
-  emit('aumentar', item);
-};
-
-const disminuir = (item) => {
-  emit('disminuir', item);
-};
-
-const quitar = (item) => {
-  emit('quitar', item);
-};
-
-const emitirCompra = () => {
-  emit('comprar');
-};
+const aumentar = (item) => emit('aumentar', item);
+const disminuir = (item) => emit('disminuir', item);
+const quitar = (item) => emit('quitar', item);
 
 const getPrecioUnitario = (item) => {
   if (item.isOferta === 1 && item.descuento) {
@@ -121,7 +105,38 @@ const calcularTotalCarrito = () => {
   }, 0);
 };
 
-const formatearPrecio = (precio) => {
-  return Number(precio).toFixed(2);
+const formatearPrecio = (precio) => Number(precio).toFixed(2);
+
+const irAPagar = () => {
+  if (props.carrito.length > 0) {
+    // ✅ NORMALIZAR DATOS antes de guardar en localStorage
+    const carritoNormalizado = props.carrito.map(item => ({
+      id: item.id,
+      nombre: item.nombre,
+      cantidad: item.cantidad,
+      precio: item.precio,
+      precio_unitario: getPrecioUnitario(item), // 👈 Calculamos y guardamos el precio unitario
+      isOferta: item.isOferta || 0,
+      descuento: item.descuento || 0
+    }));
+    
+    localStorage.setItem("carrito", JSON.stringify(carritoNormalizado));
+    
+    // ✅ Opciones de rutas - usa la que corresponda a tu aplicación
+    try {
+      // Opción 1: Si usas route() helper
+      router.visit(route('pagos.create'));
+    } catch (error) {
+      try {
+        // Opción 2: Si está dentro del grupo 'landing'
+        router.visit(route('landing.pagos.create'));
+      } catch (error2) {
+        // Opción 3: Ruta directa como fallback
+        router.visit('/pagos/create');
+      }
+    }
+  } else {
+    alert('El carrito está vacío.');
+  }
 };
 </script>

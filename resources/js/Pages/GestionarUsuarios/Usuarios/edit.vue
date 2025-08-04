@@ -94,13 +94,17 @@ const submitForm = () => {
 
               <!-- Select de Rol -->
               <div>
-  <label for="role" class="block text-sm font-medium text-gray-700">Rol</label>
-  <select v-model="form.role" id="role" name="role" class="mt-1 block w-full border-2 border-gray-400 text-gray-800 bg-white rounded-md shadow-sm" >
-    <option value="">Seleccionar Rol</option>
-    <option v-for="role in props.roles" :key="role.id" :value="role.id">{{ role.name }}</option>
-  </select>
-  <p v-if="form.errors.role" class="text-sm text-red-500 mt-2">{{ form.errors.role }}</p>
-</div>
+                <label for="role" class="block text-sm font-medium text-gray-700">Rol</label>
+                <!-- En el formulario de edición -->
+              <select v-model="form.role" id="role" name="role" class="...">
+                <option value="">Seleccionar Rol</option>
+                <option v-for="role in props.roles" :key="role.id" :value="role.id" 
+                        :selected="user.roles.some(userRole => userRole.name === role.name)">
+                  {{ role.name }}
+                </option>
+              </select>
+                <p v-if="form.errors.role" class="text-sm text-red-500 mt-2">{{ form.errors.role }}</p>
+              </div>
 
 
               <div class="mt-6 flex items-center justify-end">

@@ -5,33 +5,32 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, usePage } from '@inertiajs/vue3';
 
 const page = usePage();
-const role = ref(page.props.role); // Se obtiene el permiso a editar
+
 const form = useForm({
-  name: role.value.name, // El nombre del permiso
-  guard_name: role.value.guard_name, // El guard_name del permiso
+    nombre: '',
+  descripcion: '',
+
 });
 
-// Enviar el formulario con la información actualizada del permiso
 const submitForm = () => {
-  form.post(route('admin.roles.update', { role: role.value.id }), {
-    data: form, // Asegúrate de que los datos se envíen correctamente
+  form.post(route('admin.tipos.store'), {
     onSuccess: () => {
-      console.log('Permiso actualizado exitosamente');
+      console.log('Creado exitosamente');
     },
     onError: (errors) => {
-        console.error('Error al crear:', errors); // Muestra todos los errores en consola
-      console.log('Hubo un error al actualizar el permiso');
+      console.error('Error al crear:', errors); // Muestra todos los errores en consola
+      alert('Error: ' + JSON.stringify(errors)); // Opción para mostrar en alerta
     },
   });
-};
+};;
 </script>
 
 <template>
-  <Head title="Editar role" />
+  <Head title="Editar tipo" />
 
   <AuthenticatedLayout>
     <template #header>
-      <h2 class="text-xl font-semibold leading-tight text-gray-800">Editar rol</h2>
+      <h2 class="text-xl font-semibold leading-tight text-gray-800">Editar tipo</h2>
     </template>
 
     <div class="py-12">
@@ -41,18 +40,18 @@ const submitForm = () => {
             <form @submit.prevent="submitForm">
               <div class="space-y-4">
                 <div>
-                  <label for="name" class="block text-sm font-medium text-gray-700">Nombre del Permiso</label>
-                  <input v-model="form.name" type="text" id="name" name="name" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required />
+                  <label for="nombre" class="block text-sm font-medium text-gray-700">Nombre del Tipo</label>
+                  <input v-model="form.nombre" type="text" id="nombre" name="nombre" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required />
                 </div>
 
                 <div>
-                  <label for="guard_name" class="block text-sm font-medium text-gray-700">Guard Name</label>
-                  <input v-model="form.guard_name" type="text" id="guard_name" name="guard_name" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required />
+                  <label for="descripcion" class="block text-sm font-medium text-gray-700">Descripcion</label>
+                  <input v-model="form.descripcion" type="text" id="descripcion" name="descripcion" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required />
                 </div>
               </div>
 
               <div class="mt-6 flex items-center justify-end">
-                <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded-md">Editar Rol</button>
+                <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded-md">Editar Tipo</button>
               </div>
             </form>
           </div>

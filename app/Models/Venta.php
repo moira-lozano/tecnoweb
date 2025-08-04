@@ -23,4 +23,10 @@ class Venta extends Model
         return $this->belongsTo(Persona::class, 'vendedor_id');
     }
 
+    // App\Models\Venta.php
+    public function pago()
+    {
+        return $this->hasOne(Pago::class, 'venta_id');
+    }
+
 }

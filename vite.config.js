@@ -17,5 +17,5 @@ export default defineConfig({
             },
         }),
     ],
-    base:"/inf513/grupo25sc/projeto/tecnoweb/public",
+    base:"/inf513/grupo25sc/proyecto2/tecnoweb/public",
 });

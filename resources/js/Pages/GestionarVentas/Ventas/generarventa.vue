@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm , router} from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
 const qrImage = ref('');
@@ -132,7 +132,9 @@ function showModal(mensaje) {
 
 function closeModal() {
   isModalVisible.value = false;
+  router.visit('/'); // Redirige a la ruta del carrito
 }
+
 const actualizarDatos = () => {
   if (selectedCliente.value) {
     form.name = selectedCliente.value.name;
@@ -177,7 +179,7 @@ const actualizarDatos = () => {
             <div class="flex flex-col md:flex-row space-y-6 md:space-y-0 md:space-x-6">
               <!-- Primera Parte: Formulario -->
               <div class="md:w-1/2 space-y-4">
-                <h3 class="text-2xl font-bold">Datos para la factura</h3>
+                <h3 class="text-2xl font-bold">Datos para la compra</h3>
                 <form @submit.prevent="submitForm" target="QrImage">
                   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <!-- Columna de datos del cliente -->

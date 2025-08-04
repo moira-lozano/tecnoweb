@@ -9,33 +9,47 @@ use App\Models\Pago;
 use App\Models\DetalleVenta;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class GenerarCobroController extends Controller
 {
-
-
-
     // GENERAR COBRO
     public function generarCobro(Request $request)
     {
-       // dd($request);
+        // ✅ VALIDACIÓN DE DATOS
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'cedula' => 'required|string|max:20',
+            'tcCorreo' => 'required|email',
+            'tnTelefono' => 'required|string',
+            'tcDireccion' => 'required|string',
+            'tcRazonSocial' => 'required|string',
+            'tnMonto' => 'required|numeric|min:0.01',
+            'tnTipoServicio' => 'required|in:1,2,3',
+            'taPedidoDetalle' => 'required|array|min:1',
+        ]);
+
+        // Log para debugging
+        Log::info('🔍 Datos recibidos:', $request->all());
+
         do {
             $nroPago = rand(100000, 999999);
             $existe = Pago::where('id', $nroPago)->exists();
         } while ($existe);
 
         try {
-            $lcComerceID           = "d029fa3a95e174a19934857f535eb9427d967218a36ea014b70ad704bc6c8d1c";  // credencia dado por pagofacil
+            $lcComerceID           = "d029fa3a95e174a19934857f535eb9427d967218a36ea014b70ad704bc6c8d1c";
             $lnMoneda              = 1;
             $lnTelefono            = $request->tnTelefono;
             $lcNombreUsuario       = $request->tcRazonSocial;
-            $lnCiNit               = $request->tcCiNit;
-            $lcNroPago             = $nroPago; // Genera un número aleatorio entre 100,000 y 999,999   sirve para callback , pedidoID
+            $lnDireccion           = $request->tcDireccion;
+            $lcNroPago             = $nroPago;
             $lnMontoClienteEmpresa = $request->tnMonto;
             $lcCorreo              = $request->tcCorreo;
-            $lcUrlCallBack         = route('admin.pagos.callback'); //"https://mail.tecnoweb.org.bo/inf513/grupo03sa/ultimo/public/cursos/pagos/callback";
+            $lcUrlCallBack         = route('admin.pagos.callback');
             $lcUrlReturn           = "";
-            $laPedidoDetalle       =  $request->taPedidoDetalle;
+            $laPedidoDetalle       = $request->taPedidoDetalle;
             $lcUrl                 = "";
 
             $loClient = new Client();
@@ -46,22 +60,124 @@ class GenerarCobroController extends Controller
                 $lcUrl = "https://serviciostigomoney.pagofacil.com.bo/api/servicio/realizarpagotigomoneyv2";
             }
 
+            // ✅ PAGO EN EFECTIVO - SECCIÓN CORREGIDA
+            if ($request->tnTipoServicio == 3) {
+                Log::info('💰 Procesando pago en efectivo');
+                
+                // ✅ CREAR O BUSCAR PERSONA (no solo usuario)
+                $persona = \DB::table('personas')->where('email', $request->tcCorreo)->first();
+                
+                if (!$persona) {
+                    // Crear en tabla personas
+                    $personaId = \DB::table('personas')->insertGetId([
+                        'nombre' => $request->name,
+                        'cedula' => $request->cedula,
+                        'celular' => $request->tnTelefono,
+                        'direccion' => $request->tcDireccion,
+                        'email' => $request->tcCorreo,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                    Log::info('👤 Persona creada:', ['persona_id' => $personaId]);
+                } else {
+                    $personaId = $persona->id;
+                    Log::info('👤 Persona existente encontrada:', ['persona_id' => $personaId]);
+                }
+
+                // También crear usuario si no existe (para otras funcionalidades)
+                $user = User::where('email', $request->tcCorreo)->first();
+                if (!$user) {
+                    $user = User::create([
+                        'name' => $request->name,
+                        'cedula' => $request->cedula,
+                        'celular' => $request->tnTelefono,
+                        'direccion' => $request->tcDireccion,
+                        'email' => $request->tcCorreo,
+                        'password' => bcrypt('defaultpassword123'),
+                    ]);
+                    
+                    \DB::table('role_users')->insert([
+                        'user_id' => $user->id,
+                        'role_id' => 1,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
+                // Crear nuevo ID de venta
+                do {
+                    $nroVenta = rand(100000, 999999);
+                    $ventaExistente = Venta::where('id', $nroVenta)->exists();
+                } while ($ventaExistente);
+
+                // Crear registro de Pago
+                $pago = Pago::create([
+                    'id' => $nroPago,
+                    'venta_id' => $nroVenta,
+                    'fechapago' => now(),
+                    'estado' => 1,
+                    'metodopago' => 3, // Efectivo
+                ]);
+                Log::info('💳 Pago creado:', ['pago_id' => $pago->id]);
+
+                // ✅ CREAR REGISTRO DE VENTA CON PERSONA_ID
+                $vendedorId = 1; // 👈 ID fijo del vendedor (empresa) - ajusta según tu caso
+                
+                $venta = Venta::create([
+                    'id' => $nroVenta,
+                    'comprador_id' => $personaId, // Cliente que compra
+                    'vendedor_id' => $vendedorId,  // Empresa que vende
+                    'montototal' => $request->tnMonto,
+                    'estado' => 1, // Pendiente hasta pagar
+                ]);
+                Log::info('🛒 Venta creada:', ['venta_id' => $venta->id]);
+
+                // ✅ CREAR DETALLES DE VENTA - MEJORADO
+                foreach ($request->taPedidoDetalle as $detalle) {
+                    // Calcular total si no viene
+                    $total = isset($detalle['total']) 
+                        ? $detalle['total'] 
+                        : ($detalle['cantidad'] * ($detalle['precio_unitario'] ?? $detalle['precio'] ?? 0));
+
+                    $detalleVenta = DetalleVenta::create([
+                        'venta_id' => $nroVenta,
+                        'licencia_id' => $detalle['id'],
+                        'cantidad' => $detalle['cantidad'],
+                        'total' => $total,
+                    ]);
+                    
+                    Log::info('📦 Detalle creado:', [
+                        'licencia_id' => $detalle['id'],
+                        'cantidad' => $detalle['cantidad'],
+                        'total' => $total
+                    ]);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Venta registrada con éxito para pago en efectivo.',
+                    'venta_id' => $nroVenta,
+                    'pago_id' => $nroPago,
+                    'persona_id' => $personaId,
+                ]);
+            }
+
+            // ✅ QR Y TIGO MONEY (código existente mejorado)
             $laHeader = [
                 'Accept' => 'application/json'
             ];
 
-            $laBody   = [
+            $laBody = [
                 "tcCommerceID"          => $lcComerceID,
                 "tnMoneda"              => $lnMoneda,
                 "tnTelefono"            => $lnTelefono,
                 'tcNombreUsuario'       => $lcNombreUsuario,
-                'tnCiNit'               => $lnCiNit,
+                'tcDireccion'           => $lnDireccion,
                 'tcNroPago'             => $lcNroPago,
                 "tnMontoClienteEmpresa" => $lnMontoClienteEmpresa,
                 "tcCorreo"              => $lcCorreo,
                 'tcUrlCallBack'         => $lcUrlCallBack,
                 "tcUrlReturn"           => $lcUrlReturn,
-
             ];
 
             $loResponse = $loClient->post($lcUrl, [
@@ -70,143 +186,325 @@ class GenerarCobroController extends Controller
             ]);
 
             $laResult = json_decode($loResponse->getBody()->getContents());
-//dd($laResult);
-            if ($request->tnTipoServicio == 1) {
 
-                $csrfToken = csrf_token();
-                $laValues = explode(";", $laResult->values)[1];
-                $nroTransaccion = explode(";", $laResult->values)[0];
+            // ✅ LOGGING MEJORADO PARA DEBUGGING
+            Log::info('🌐 Respuesta API completa:', [
+                'response' => $laResult,
+                'values' => $laResult->values ?? 'No existe',
+                'tipo_servicio' => $request->tnTipoServicio
+            ]);
+
+            if ($request->tnTipoServicio == 1) {
+                // ✅ VALIDACIÓN MEJORADA PARA QR
+                if (!isset($laResult->values) || empty($laResult->values)) {
+                    Log::error('❌ Error QR: No se recibió values en la respuesta');
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Error: La API de QR no devolvió datos válidos',
+                        'api_response' => $laResult
+                    ], 500);
+                }
+
+                // Verificar si contiene punto y coma
+                if (strpos($laResult->values, ';') === false) {
+                    Log::error('❌ Error QR: values no contiene separador ";"', [
+                        'values' => $laResult->values
+                    ]);
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Error: Formato de respuesta QR inválido',
+                        'received_values' => $laResult->values
+                    ], 500);
+                }
+
+                // ✅ SEPARACIÓN SEGURA CON VALIDACIÓN
+                $valuesArray = explode(";", $laResult->values);
+                
+                if (count($valuesArray) < 2) {
+                    Log::error('❌ Error QR: values no tiene suficientes elementos', [
+                        'values' => $laResult->values,
+                        'array_count' => count($valuesArray)
+                    ]);
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Error: Respuesta QR incompleta',
+                        'values_array' => $valuesArray
+                    ], 500);
+                }
+
+                $nroTransaccion = $valuesArray[0]; // Primer elemento
+                $laValues = $valuesArray[1];       // Segundo elemento
+
+                Log::info('✅ QR procesado correctamente:', [
+                    'nro_transaccion' => $nroTransaccion,
+                    'values_length' => strlen($laValues)
+                ]);
 
                 // Buscar usuario por correo
                 $user = User::where('email', $request->tcCorreo)->first();
-
                 if (!$user) {
-                    // Si no existe el usuario, crearlo
                     $user = User::create([
                         'name' => $request->name,
                         'cedula' => $request->cedula,
                         'celular' => $request->tnTelefono,
                         'email' => $request->tcCorreo,
-                        'password' => "null",
+                        'password' => bcrypt('defaultpassword123'),
                     ]);
-                    // Asignar rol
-                    $user->roles()->attach(1);
+                    
+                    // ✅ INSERCIÓN MANUAL EN TABLA PIVOT PARA QR
+                    \DB::table('role_users')->insert([
+                        'user_id' => $user->id,
+                        'role_id' => 1, // Cliente
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
                 }
 
-
-
-
                 Pago::create([
-                    'id' =>  $nroPago,
+                    'id' => $nroPago,
+                    'venta_id' => $nroTransaccion,
                     'fechapago' => now(),
                     'estado' => 1,
-                    'metodopago' => 4,   // 4 es Qr
+                    'metodopago' => 4, // QR
                 ]);
-                $user_id = Auth::user()->id;
 
                 Venta::create([
                     'id' => $nroTransaccion,
-                    'user_id' => $user_id,
-                    'pago_id' => $lcNroPago,
+                    'comprador_id' => $user->id, // 👈 Usar el usuario encontrado/creado
+                    'vendedor_id' => 1, // ID fijo del vendedor (empresa)
                     'fecha' => now(),
-                    'metodopago' => 4,  // 4 = Qr , 2 = tigo Money
+                    'metodopago' => 4, // QR
                     'montototal' => $request->tnMonto,
-                    'estado' => 1, // 1 = pendiente , 2 = pago exitos0 , 3 = revertido , 4 = anulado
+                    'estado' => 1,
                 ]);
 
-
-
-
                 foreach ($laPedidoDetalle as $detalle) {
-                    //  dd( $detalle );
+                    $total = isset($detalle['total']) 
+                        ? $detalle['total'] 
+                        : ($detalle['cantidad'] * ($detalle['precio_unitario'] ?? $detalle['precio'] ?? 0));
+
                     DetalleVenta::create([
-                        'venta_id' => $nroTransaccion,    // Tiene el ID del pedido por tigo money
-                        'producto_id' =>  $detalle['id'],  // Tiene el ID del producto, en este caso, el curso
+                        'venta_id' => $nroTransaccion,
+                        'licencia_id' => $detalle['id'],
                         'cantidad' => $detalle['cantidad'],
-                        'total' =>  $detalle['total'],
+                        'total' => $total,
                     ]);
                 }
 
-                $laQrImage = "data:image/png;base64," . json_decode($laValues)->qrImage;
+                // ✅ VALIDACIÓN DE QR IMAGE
+                $qrData = json_decode($laValues);
+                if (!$qrData || !isset($qrData->qrImage)) {
+                    Log::error('❌ Error: No se pudo obtener qrImage', [
+                        'laValues' => $laValues
+                    ]);
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Error: No se pudo generar la imagen QR',
+                        'qr_data' => $laValues
+                    ], 500);
+                }
+
+                $laQrImage = "data:image/png;base64," . $qrData->qrImage;
 
                 return response()->json([
+                    'success' => true,
                     'qrImage' => $laQrImage,
-                    'nroTransaccion' =>  $nroTransaccion,
+                    'nroTransaccion' => $nroTransaccion,
                 ]);
+
             } elseif ($request->tnTipoServicio == 2) {
-                $venta = Venta::create([
-                    'id' => $laResult->values,
-                    'user_id' => Auth::user()->id,
-                    'fecha' => now(),
-                    'metodopago' => 2,  // 1 = Qr , 2 = tigo Money
-                    'montototal' => $request->tnMonto,
-                    'estado' => 1, // 1 = pendiente , 2 = pago exitos0 , 3 = revertido , 4 = anulado
-                ]);
-                foreach ($laPedidoDetalle as $detalle) {
-                    $detalleVenta = DetalleVenta::create([
-                        'venta_id' =>  $laResult->values,   // tiene el id del pedido por tigo money
-                        'producto_id' => $detalle['id'],   // Tiene el ID del producto
-                        'cantidad' => $detalle['Cantidad'],
-                        'total' =>  $detalle['Total'],
+                // ✅ VALIDACIÓN PARA TIGO MONEY
+                if (!isset($laResult->values) || empty($laResult->values)) {
+                    Log::error('❌ Error Tigo Money: No se recibió values en la respuesta');
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Error: La API de Tigo Money no devolvió datos válidos',
+                        'api_response' => $laResult
+                    ], 500);
+                }
+
+                // Crear o buscar usuario
+                $user = User::where('email', $request->tcCorreo)->first();
+                if (!$user) {
+                    $user = User::create([
+                        'name' => $request->name,
+                        'cedula' => $request->cedula,
+                        'celular' => $request->tnTelefono,
+                        'email' => $request->tcCorreo,
+                        'password' => bcrypt('defaultpassword123'),
+                    ]);
+                    
+                    // ✅ INSERCIÓN MANUAL EN TABLA PIVOT PARA TIGO MONEY
+                    \DB::table('role_users')->insert([
+                        'user_id' => $user->id,
+                        'role_id' => 1, // Cliente
+                        'created_at' => now(),
+                        'updated_at' => now(),
                     ]);
                 }
-            } elseif ($request->tnTipoServicio == 3) {
-            // Crear o buscar usuario por correo
-            $user = User::where('email', $request->tcCorreo)->first();
-            if (!$user) {
-                $user = User::create([
-                    'name' => $request->name,
-                    'cedula' => $request->cedula,
-                    'celular' => $request->tnTelefono,
-                    'email' => $request->tcCorreo,
-                    'password' => 'null',
+
+                $venta = Venta::create([
+                    'id' => $laResult->values,
+                    'comprador_id' => $user->id, // 👈 Corregido: era user_id
+                    'vendedor_id' => 1, // ID fijo del vendedor (empresa)
+                    'fecha' => now(),
+                    'metodopago' => 2, // Tigo Money
+                    'montototal' => $request->tnMonto,
+                    'estado' => 1,
                 ]);
-                $user->roles()->attach(1); // cliente
-            }
 
-            // Crear nuevo ID de venta
-            do {
-                $nroVenta = rand(100000, 999999);
-                $ventaExistente = Venta::where('id', $nroVenta)->exists();
-            } while ($ventaExistente);
+                foreach ($laPedidoDetalle as $detalle) {
+                    $total = isset($detalle['total']) 
+                        ? $detalle['total'] 
+                        : ($detalle['cantidad'] * ($detalle['precio_unitario'] ?? $detalle['precio'] ?? 0));
 
-            // Crear registro de Pago
-            Pago::create([
-                'id' => $nroPago,
-                'fechapago' => now(),
-                'estado' => 1,
-                'metodopago' => 3, // Efectivo
-            ]);
+                    DetalleVenta::create([
+                        'venta_id' => $laResult->values,
+                        'licencia_id' => $detalle['id'], // 👈 Corregido: era producto_id
+                        'cantidad' => $detalle['cantidad'],
+                        'total' => $total,
+                    ]);
+                }
 
-            Venta::create([
-                'id' => $nroVenta,
-                'user_id' => $user->id,
-                'pago_id' => $nroPago,
-                'fecha' => now(),
-                'metodopago' => 3, // Efectivo
-                'montototal' => $request->tnMonto,
-                'estado' => 1, // Pendiente hasta pagar
-            ]);
-
-            foreach ($request->taPedidoDetalle as $detalle) {
-                DetalleVenta::create([
-                    'venta_id' => $nroVenta,
-                    'producto_id' => $detalle['id'],
-                    'cantidad' => $detalle['cantidad'],
-                    'total' => $detalle['total'],
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Pago Tigo Money procesado correctamente',
+                    'transaccion_id' => $laResult->values
                 ]);
             }
+
+        } catch (\Throwable $th) {
+            Log::error('❌ Error en generarCobro:', [
+                'message' => $th->getMessage(),
+                'line' => $th->getLine(),
+                'file' => $th->getFile(),
+                'request_data' => $request->all()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor: ' . $th->getMessage(),
+                'error_line' => $th->getLine()
+            ], 500);
+        }
+    }
+
+    // ✅ MÉTODO TEMPORAL PARA DEBUGGING - Agrega esto a tu GenerarCobroController
+    public function debug(Request $request)
+    {
+        try {
+            Log::info('🔍 Debug - Datos recibidos:', $request->all());
+            
+            // Verificar estructura de taPedidoDetalle
+            if ($request->has('taPedidoDetalle')) {
+                Log::info('📦 Estructura de taPedidoDetalle:', $request->taPedidoDetalle);
+                foreach ($request->taPedidoDetalle as $index => $detalle) {
+                    Log::info("📋 Detalle {$index}:", $detalle);
+                }
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Debug completado - revisa los logs',
+                'data_received' => $request->all()
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('❌ Error en debug:', [
+                'message' => $e->getMessage(),
+                'line' => $e->getLine()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // ✅ MÉTODO PARA PROBAR DIRECTAMENTE LA API QR
+    public function testApiQR(Request $request)
+    {
+        try {
+            // Datos de prueba para QR
+            $lcComerceID = "d029fa3a95e174a19934857f535eb9427d967218a36ea014b70ad704bc6c8d1c";
+            $nroPago = rand(100000, 999999);
+            
+            $laHeader = [
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json'
+            ];
+
+            $laBody = [
+                "tcCommerceID" => $lcComerceID,
+                "tnMoneda" => 1,
+                "tnTelefono" => $request->input('tnTelefono', '70000000'),
+                'tcNombreUsuario' => $request->input('tcRazonSocial', 'Usuario Prueba'),
+                'tnDireccion' => $request->input('tcDireccion', '12345678'),
+                'tcNroPago' => $nroPago,
+                "tnMontoClienteEmpresa" => $request->input('tnMonto', 10),
+                "tcCorreo" => $request->input('tcCorreo', 'test@example.com'),
+                'tcUrlCallBack' => route('admin.pagos.callback'),
+                "tcUrlReturn" => "",
+            ];
+
+            Log::info('🚀 Enviando request a API QR:', [
+                'url' => 'https://serviciostigomoney.pagofacil.com.bo/api/servicio/generarqrv2',
+                'headers' => $laHeader,
+                'body' => $laBody
+            ]);
+
+            $loClient = new \GuzzleHttp\Client();
+            $loResponse = $loClient->post('https://serviciostigomoney.pagofacil.com.bo/api/servicio/generarqrv2', [
+                'headers' => $laHeader,
+                'json' => $laBody,
+                'timeout' => 30,
+                'http_errors' => false // No lanzar excepción en errores HTTP
+            ]);
+
+            $statusCode = $loResponse->getStatusCode();
+            $responseBody = $loResponse->getBody()->getContents();
+            
+            Log::info('📡 Respuesta cruda de API QR:', [
+                'status_code' => $statusCode,
+                'raw_body' => $responseBody,
+                'headers' => $loResponse->getHeaders()
+            ]);
+
+            // Intentar decodificar JSON
+            $laResult = json_decode($responseBody);
+            $jsonError = json_last_error();
+            
+            Log::info('🔍 Análisis de respuesta JSON:', [
+                'json_decode_result' => $laResult,
+                'json_error' => $jsonError,
+                'json_error_msg' => json_last_error_msg(),
+                'is_object' => is_object($laResult),
+                'object_vars' => is_object($laResult) ? get_object_vars($laResult) : null
+            ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Venta registrada con éxito para pago en efectivo.',
-                'venta_id' => $nroVenta,
+                'message' => 'Prueba API QR completada - revisa logs para detalles',
+                'status_code' => $statusCode,
+                'raw_response' => $responseBody,
+                'decoded_response' => $laResult,
+                'json_error' => $jsonError === JSON_ERROR_NONE ? 'No error' : json_last_error_msg(),
+                'request_sent' => $laBody
             ]);
-        }
 
-        } catch (\Throwable $th) {
-
-            return $th->getMessage() . " - " . $th->getLine();
+        } catch (\Exception $e) {
+            Log::error('❌ Error en testApiQR:', [
+                'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'line' => $e->getLine()
+            ], 500);
         }
     }
 }

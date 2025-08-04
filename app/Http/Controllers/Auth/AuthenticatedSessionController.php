@@ -30,16 +30,17 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
-
         $request->session()->regenerate();
-   $user = Auth::user();
-
-    // Redireccionar según el rol
-    if ($user->hasRole('gerente')) {
-         return redirect()->intended(route('dashboard', absolute: false));
-
-    }
-        return redirect('/'); // o route('home') si existe
+        
+        $user = Auth::user();
+        
+        // Usar Spatie Permission para verificar roles
+        if ($user->hasAnyRole(['gerente', 'vendedor', 'supervisor'])) {
+            return redirect()->route('dashboard');
+        }
+        
+        // Si es cliente o no tiene rol, va al landing
+        return redirect()->route('landing');
     }
 
     /**
@@ -48,11 +49,9 @@ class AuthenticatedSessionController extends Controller
     public function destroy(Request $request): RedirectResponse
     {
         Auth::guard('web')->logout();
-
         $request->session()->invalidate();
-
         $request->session()->regenerateToken();
-
-        return redirect('/');
+        
+        return redirect('');
     }
 }

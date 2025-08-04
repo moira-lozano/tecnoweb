@@ -32,7 +32,20 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() ? [
+                    'id' => $request->user()->id,
+                    'name' => $request->user()->name,
+                    'email' => $request->user()->email,
+                    'cedula' => $request->user()->cedula,
+                    'celular' => $request->user()->celular,
+                    'direccion' => $request->user()->direccion,
+                    // Usando Spatie Permission
+                    'roles' => $request->user()->getRoleNames(), // Todos los roles
+                    'rol' => $request->user()->getRoleNames()->first(), // Primer rol
+                    'permissions' => $request->user()->getPermissionNames(), // Permisos
+                    'is_admin' => $request->user()->hasAnyRole(['gerente', 'vendedor', 'supervisor']),
+                    'is_client' => $request->user()->hasRole('cliente'),
+                ] : null,
             ],
         ];
     }
