@@ -102,10 +102,10 @@ const fontClass = ref(''); // Clase para la fuente
       localStorage.setItem('font', fontClass.value);
   };
 
-  const setThemeBasedOnTime = () => {
+/*   const setThemeBasedOnTime = () => {
   const currentHour = new Date().getHours();
   isDarkMode.value = currentHour >= 19 || currentHour < 7;
-  };
+  }; */
 
 
 const savedTheme = localStorage.getItem('theme');
