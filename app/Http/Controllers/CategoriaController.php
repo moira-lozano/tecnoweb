@@ -81,7 +81,7 @@ class CategoriaController extends Controller
         $categoria->update($validated);
 
         // Redirigir a la lista de categorías con un mensaje de éxito
-        return redirect()->route('admin.categorias.index')->with('success', 'Categoría actualizada exitosamente.');
+        return redirect()->route('admin.categorias')->with('success', 'Categoría actualizada exitosamente.');
     }
 
     /**
@@ -93,6 +93,6 @@ class CategoriaController extends Controller
         $categoria->delete();
 
         // Redirigir a la lista de categorías con un mensaje de éxito
-        return redirect()->route('admin.categorias.index')->with('success', 'Categoría eliminada exitosamente.');
+        return redirect()->route('admin.categorias')->with('success', 'Categoría eliminada exitosamente.');
     }
 }

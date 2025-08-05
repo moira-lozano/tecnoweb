@@ -10,7 +10,13 @@
 
     <!-- Imagen del producto (placeholder por ahora) -->
     <div class="h-48 bg-gray-200 dark:bg-gray-600 rounded-lg mb-4 flex items-center justify-center" :class="{ 'mt-6': producto.isOferta === 1 }">
-      <span class="text-gray-500 dark:text-gray-400">Imagen del producto</span>
+      <!-- <span class="text-gray-500 dark:text-gray-400">Imagen del producto</span> -->
+      <img
+          :src="`/storage/antivirus.jpg`"
+          alt="Imagen del producto"
+          class="h-48 w-full object-cover rounded-t-lg"
+          
+        />
     </div>
 
     <!-- Detalles del producto -->

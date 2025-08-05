@@ -10,13 +10,14 @@ return new class extends Migration
     {
  
 
-        Schema::create('roles', function (Blueprint $table) {
+         Schema::create('roles', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name');
             $table->string('guard_name');
             $table->timestamps();
             $table->unique(['name', 'guard_name']);
-        });
+        }); 
+    
 
         app('cache')
             ->store(config('permission.cache.store') != 'default' ? config('permission.cache.store') : null)

@@ -16,25 +16,41 @@ class ProductosLandingController extends Controller
 
     public function index()
     {
-
         $pageName = 'Seccion Productos';
         $PageView = $this->pageView($pageName);
 
-        $allProductos = Licencia::with(['marca','serie'])->get();
+        $allProductos = Licencia::with(['marca','serie', 'categoria'])->get();
 
+        $user = null;
+        if (Auth::check()) {
+            $email = Auth::user()->email;
+            $user = User::where('email', $email)->first();
+        }
 
-   $user = null;
-   if (Auth::check()) {
-       $email = Auth::user()->email;
-       $user = User::where('email', $email)->first();
-   }
+        // Obtener carrito de sesión si existe
+        $carrito = session()->get('carrito', []);
+
+        // Formatear carrito
+        $carrito = collect($carrito)->map(function ($producto) {
+            return [
+                'id' => $producto['id'],
+                'nombre' => $producto['nombre'],
+                'cantidad' => $producto['cantidad'],
+                'precio' => $producto['precio'],
+                'cantidadDisponible' => $producto['cantidadDisponible'] ?? 7,
+                'isOferta' => $producto['isOferta'] ?? 0,
+                'descuento' => $producto['descuento'] ?? 0,
+            ];
+        });
+
         return Inertia::render('LandingPage/Components/ProductosSeccion', [
             'productos' => $allProductos,
             'pageview' => $PageView,
             'user' => $user,
-
+            'carrito' => $carrito, // 👈 Aquí lo pasas a Vue
         ]);
     }
+
 
 
 

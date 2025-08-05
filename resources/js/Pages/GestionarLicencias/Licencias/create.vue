@@ -8,11 +8,14 @@ const page = usePage();
 // Listas de series y marcas desde props
 const seriesOptions = page.props.series || [];
 const marcasOptions = page.props.marcas || [];
+const categoriasOptions = page.props.categorias || [];
 
 const form = useForm({
   nombre: '',
   serie_id: '',
   marca_id: '',
+  categoria_id: '',
+  cantidad: '',
   precio: 0.00,
   precio_mayorista: 0.00,
   precio_renovacion: 0.00,
@@ -21,10 +24,13 @@ const form = useForm({
   caducable: '0',
   formateable: '0',
   compra_asistida: '0',
+  cantidad_disponible: 0,
 });
+
 
 const submitForm = () => {
   form.post(route('admin.licencias.store'), {
+    forceFormData: true, // <-- necesario para enviar archivos
     onSuccess: () => {
       console.log('Licencia creada exitosamente');
     },
@@ -34,6 +40,7 @@ const submitForm = () => {
     },
   });
 };
+
 </script>
 
 <template>
@@ -101,6 +108,39 @@ const submitForm = () => {
                     </option>
                   </select>
                   <p v-if="form.errors.marca_id" class="text-sm text-red-500 mt-2">{{ form.errors.marca_id }}</p>
+                </div>
+
+                <!-- Categoria -->
+                <div>
+                  <label for="categoria_id" class="block text-sm font-medium text-gray-700">Categoria</label>
+                  <select
+                    v-model="form.categoria_id"
+                    id="categoria_id"
+                    name="categoria_id"
+                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                    required
+                  >
+                    <option value="" disabled>-- Seleccionar  --</option>
+                    <option v-for="categoria in categoriasOptions" :key="categoria.id" :value="categoria.id">
+                      {{ categoria.nombre }}
+                    </option>
+                  </select>
+                  <p v-if="form.errors.categoria_id" class="text-sm text-red-500 mt-2">{{ form.errors.categoria_id }}</p>
+                </div>
+
+                <!-- Cantidad -->
+                <div>
+                  <label for="cantidad" class="block text-sm font-medium text-gray-700">cantidad</label>
+                  <input
+                    v-model="form.cantidad"
+                    type="number"
+                    step="1"
+                    id="cantidad"
+                    name="cantidad"
+                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                    required
+                  />
+                  <p v-if="form.errors.cantidad" class="text-sm text-red-500 mt-2">{{ form.errors.cantidad }}</p>
                 </div>
 
                 <!-- Precio -->
@@ -219,6 +259,21 @@ const submitForm = () => {
                     <option value="1">Sí</option>
                   </select>
                   <p v-if="form.errors.compra_asistida" class="text-sm text-red-500 mt-2">{{ form.errors.compra_asistida }}</p>
+                </div>
+
+                 <!-- Cantidad Disponible-->
+                <div>
+                  <label for="cantidad_disponible" class="block text-sm font-medium text-gray-700">Cantidad Disponible</label>
+                  <input
+                    v-model="form.cantidad_disponible"
+                    type="number"
+                    step="1"
+                    id="cantidad_disponible"
+                    name="cantidad_disponible"
+                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                    required
+                  />
+                  <p v-if="form.errors.cantidad_disponible" class="text-sm text-red-500 mt-2">{{ form.errors.cantidad_disponible }}</p>
                 </div>
 
                 <!-- Botón -->

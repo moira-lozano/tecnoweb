@@ -4,9 +4,10 @@
 
         <Link  :href="route('landing.miproducto.details', producto.id)" method="get" >
         <img
-          :src=" producto.imagen"
+          :src="`http://localhost:8000/storage/antivirus.jpg`"
           alt="Imagen del producto"
           class="h-48 w-full object-cover rounded-t-lg"
+          
         />
         <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100 mt-2">{{ producto.nombre }}</h3>
         <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">{{ producto.descripcion }}</p>

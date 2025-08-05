@@ -19,13 +19,15 @@ class Licencia extends Model
         'caducable',
         'formateable',
         'compra_asistida',
+        'cantidad',
+        'categoria_id',
+        'cantidad_disponible',
     ];
 
      public function categoria()
     {
-        return $this->hasOne(Categoria::class);
+        return $this->belongsTo(Categoria::class);
     }
-
 
     public function serie()
     {
@@ -41,12 +43,12 @@ class Licencia extends Model
         return $this->hasMany(Venta::class);
     }
     public function detalleVentas()
-{
-    return $this->hasMany(DetalleVenta::class);
-}
+    {
+        return $this->hasMany(DetalleVenta::class);
+    }
 
-    public function comisiones()
-{
-    return $this->hasMany(Comision::class);
-}
+        public function comisiones()
+    {
+        return $this->hasMany(Comision::class);
+    }
 }

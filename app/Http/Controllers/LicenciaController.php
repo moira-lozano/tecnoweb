@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Licencia;
 use App\Models\Marca;
 use App\Models\Serie;
+use App\Models\Categoria;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -16,9 +17,9 @@ class LicenciaController extends Controller
     public function index()
     {
         // Obtener todas las licencias
-       $licencias = Licencia::with(['serie', 'marca'])->paginate(10);
+        $licencias = Licencia::with(['serie', 'marca', 'categoria'])->paginate(10);
 
-      return Inertia::render('GestionarLicencias/Licencias/index', [
+        return Inertia::render('GestionarLicencias/Licencias/index', [
             'licencias' => $licencias,
         ]);
     }
@@ -28,41 +29,30 @@ class LicenciaController extends Controller
      */
     public function create()
     {
-          $series = Serie::all();
-          $marcas = Marca::all();
+        $series = Serie::all();
+        $marcas = Marca::all();
+        $categorias = Categoria::all();
 
-      return Inertia::render('GestionarLicencias/Licencias/create', [
+        return Inertia::render('GestionarLicencias/Licencias/create', [
             'series' => $series,
-            'marcas' => $marcas
+            'marcas' => $marcas,
+            'categorias' => $categorias
         ]);
     }
 
     /**
      * Store a newly created resource in storage.
      */
+
 public function store(Request $request)
 {
-    // Validar los datos del request
-    $validated = $request->validate([
-        'nombre' => 'required|string|max:255',
-        'serie_id' => 'required|exists:series,id',
-        'marca_id' => 'required|exists:marcas,id',
-        'precio' => 'required|numeric|min:0',
-        'precio_mayorista' => 'nullable|numeric|min:0',
-        'precio_renovacion' => 'nullable|numeric|min:0',
-        'compartida' => 'required|in:0,1',
-        'trasladable' => 'required|in:0,1',
-        'caducable' => 'required|in:0,1',
-        'formateable' => 'required|in:0,1',
-        'compra_asistida' => 'required|in:0,1',
-    ]);
+    $data = $request->all();
 
-    // Crear una nueva licencia con los datos validados
-    Licencia::create($validated);
+    Licencia::create($data);
 
-    // Redirigir a la lista de licencias con un mensaje de éxito
-    return redirect()->route('admin.licencias')->with('success', 'Licencia creada exitosamente.');
+    return redirect()->route('admin.licencias')->with('success', 'Licencia creada correctamente');
 }
+
 
 
     /**
@@ -111,6 +101,6 @@ public function store(Request $request)
         $licencia->delete();
 
         // Redirigir a la lista de licencias con un mensaje de éxito
-        return redirect()->route('admin.licencias.index')->with('success', 'Licencia eliminada exitosamente.');
+        return redirect()->route('admin.licencias')->with('success', 'Licencia eliminada exitosamente.');
     }
 }

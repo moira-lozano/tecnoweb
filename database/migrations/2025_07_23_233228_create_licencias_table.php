@@ -2,6 +2,7 @@
 
 use App\Models\Marca;
 use App\Models\Serie;
+use App\Models\Categoria;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -18,6 +19,8 @@ return new class extends Migration
             $table->string('nombre');
             $table->foreignIdFor(Serie::class);
             $table->foreignIdFor(Marca::class);
+            $table->foreignIdFor(Categoria::class);
+            $table->integer('cantidad');
             $table->decimal('precio', 10, 2);
             $table->decimal('precio_mayorista', 10, 2);
             $table->decimal('precio_renovacion', 10, 2);
@@ -26,6 +29,7 @@ return new class extends Migration
             $table->enum('caducable', ['0','1'])->default('0');
             $table->enum('formateable', ['0','1'])->default('0');
             $table->enum('compra_asistida', ['0','1'])->default('0');
+            $table->integer('cantidad_disponible');
 
 
             $table->timestamps();
