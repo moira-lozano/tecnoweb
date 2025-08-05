@@ -50,7 +50,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import Header from '@/Components/Header.vue'; // Ajusta la ruta según tu estructura
 import Producto from '@/Pages/LandingPage/Components/producto.vue';
 import Carrito from '@/Pages/LandingPage/Components/Carrito.vue';
@@ -63,6 +63,27 @@ const props = defineProps({
 });
 
 const carrito = ref([]);
+
+// 🔥 WATCH para guardar automáticamente en localStorage
+watch(carrito, (nuevoCarrito) => {
+  console.log('🔄 Carrito actualizado, guardando en localStorage:', nuevoCarrito);
+  localStorage.setItem('carrito', JSON.stringify(nuevoCarrito));
+}, { deep: true });
+
+// 🔥 CARGAR carrito desde localStorage al montar el componente
+
+onMounted(() => {
+  const carritoGuardado = localStorage.getItem('carrito');
+  if (carritoGuardado) {
+    try {
+      carrito.value = JSON.parse(carritoGuardado);
+      console.log('📦 Carrito cargado desde localStorage:', carrito.value);
+    } catch (error) {
+      console.error('❌ Error al cargar carrito:', error);
+      localStorage.removeItem('carrito'); // Limpiar localStorage corrupto
+    }
+  }
+});
 
 // Computed para obtener un producto específico del carrito
 const getProductoEnCarrito = (productoId) => {

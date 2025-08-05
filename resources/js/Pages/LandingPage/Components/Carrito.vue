@@ -262,39 +262,48 @@ const irAPagar = () => {
     return;
   }
 
-  // Preparar datos del carrito para el checkout
+  // 🔥 PREPARAR datos normalizados para el carrito
   const carritoNormalizado = props.carrito.map(item => ({
     id: item.id,
     nombre: item.nombre,
-    cantidad: item.cantidad,
-    precio: item.precio,
+    cantidad: parseInt(item.cantidad) || 1,
+    precio: parseFloat(item.precio) || 0,
     precio_unitario: getPrecioUnitario(item),
     isOferta: item.isOferta || 0,
     descuento: item.descuento || 0,
-    total: item.cantidad * getPrecioUnitario(item)
+    total: item.cantidad * getPrecioUnitario(item),
+    cantidadDisponible: item.cantidadDisponible || 0
   }));
 
-  // En lugar de localStorage, pasar los datos como parámetros
-  const datosCheckout = {
-    carrito: carritoNormalizado,
-    total: calcularTotalCarrito(),
-    items_count: totalProductos.value
-  };
+  console.log('🛒 Carrito normalizado para pago:', carritoNormalizado);
+  console.log('💰 Total del carrito:', calcularTotalCarrito());
 
+  // 🔥 GUARDAR en localStorage ANTES de redirigir
   try {
-    // Intentar diferentes rutas de pago
-    router.post(route('pagos.create'), datosCheckout);
+    localStorage.setItem('carrito', JSON.stringify(carritoNormalizado));
+    console.log('✅ Carrito guardado en localStorage correctamente');
+    
+    // Verificar que se guardó correctamente
+    const verificacion = localStorage.getItem('carrito');
+    console.log('🔍 Verificación localStorage:', verificacion);
+    
+  } catch (error) {
+    console.error('❌ Error guardando en localStorage:', error);
+    alert('Hubo un problema al guardar los datos. Inténtalo de nuevo.');
+    return;
+  }
+
+  // 🔥 REDIRIGIR a la página de pago
+  try {
+    // Opción 1: Intentar con la ruta de pagos
+    router.visit(route('landing.pagos.formulario'));
   } catch {
     try {
-      router.post(route('landing.pagos.create'), datosCheckout);
+      // Opción 2: Intentar ruta alternativa
+      router.visit('/pagos/create');
     } catch {
-      // Fallback: usar GET con query params
-      const queryParams = new URLSearchParams({
-        total: calcularTotalCarrito(),
-        items: totalProductos.value
-      });
-      
-      router.visit(`/pagos/create?${queryParams.toString()}`);
+      // Opción 3: Fallback manual
+      window.location.href = '/pagos/create';
     }
   }
 };

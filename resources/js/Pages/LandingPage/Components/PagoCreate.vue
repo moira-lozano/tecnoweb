@@ -11,6 +11,7 @@ const modalMessage = ref('');
 const isModalVisible = ref(false);
 
 const props = defineProps({
+  taPedidoDetalle: Array,
   numeroTransaccion: String,
   qrImage: String,
 });
@@ -173,7 +174,7 @@ onMounted(() => {
       carrito.value = JSON.parse(data);
       console.log("🛒 Carrito parseado:", carrito.value); // 👈 DEBUG
       
-      form.taPedidoDetalle = carrito.value;
+      form.taPedidoDetalle = props.taPedidoDetalle;
       form.tnMonto = calcularTotal();
       
       console.log("💰 Total calculado:", form.tnMonto); // 👈 DEBUG

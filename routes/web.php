@@ -41,6 +41,7 @@ Route::post('/pagos/callback', [CallBackAdminController::class, '__invoke'])->na
 Route::post('/landing/pagos/create', [PagoController::class, 'create'])->name('landing.pagos.create');
 Route::post('/landing/pagos/generarCobro', [GenerarCobroController::class, 'generarCobro'])->name('landing.pagos.generarCobro');
 Route::get('/landing/pagos/consultar', [ConsultarAdminController::class, '__invoke'])->name('landing.pagos.consultar');
+Route::get('/landing/pagos/formulario', [PagoController::class, 'create'])->name('landing.pagos.formulario');
 
 // RUTA TEMPORAL PARA DEBUGGING
 Route::post('/debug-pago', [GenerarCobroController::class, 'debug'])->name('landing.pagos.debug');

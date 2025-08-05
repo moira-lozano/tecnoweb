@@ -27,7 +27,7 @@ class GenerarCobroController extends Controller
             'tcRazonSocial' => 'required|string',
             'tnMonto' => 'required|numeric|min:0.01',
             'tnTipoServicio' => 'required|in:1,2,3',
-            'taPedidoDetalle' => 'required|array|min:1',
+            'taPedidoDetalle' => $request->input('taPedidoDetalle', []),
         ]);
 
         // Log para debugging
@@ -423,88 +423,33 @@ class GenerarCobroController extends Controller
     }
 
     // ✅ MÉTODO PARA PROBAR DIRECTAMENTE LA API QR
-    public function testApiQR(Request $request)
-    {
-        try {
-            // Datos de prueba para QR
-            $lcComerceID = "d029fa3a95e174a19934857f535eb9427d967218a36ea014b70ad704bc6c8d1c";
-            $nroPago = rand(100000, 999999);
-            
-            $laHeader = [
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json'
-            ];
+public function verComprobante($id)
+{
+    try {
+        // Cargar la venta con su detalle
+        $venta = Venta::with('detalleVenta')->find($id);
 
-            $laBody = [
-                "tcCommerceID" => $lcComerceID,
-                "tnMoneda" => 1,
-                "tnTelefono" => $request->input('tnTelefono', '70000000'),
-                'tcNombreUsuario' => $request->input('tcRazonSocial', 'Usuario Prueba'),
-                'tnDireccion' => $request->input('tcDireccion', '12345678'),
-                'tcNroPago' => $nroPago,
-                "tnMontoClienteEmpresa" => $request->input('tnMonto', 10),
-                "tcCorreo" => $request->input('tcCorreo', 'test@example.com'),
-                'tcUrlCallBack' => route('admin.pagos.callback'),
-                "tcUrlReturn" => "",
-            ];
-
-            Log::info('🚀 Enviando request a API QR:', [
-                'url' => 'https://serviciostigomoney.pagofacil.com.bo/api/servicio/generarqrv2',
-                'headers' => $laHeader,
-                'body' => $laBody
-            ]);
-
-            $loClient = new \GuzzleHttp\Client();
-            $loResponse = $loClient->post('https://serviciostigomoney.pagofacil.com.bo/api/servicio/generarqrv2', [
-                'headers' => $laHeader,
-                'json' => $laBody,
-                'timeout' => 30,
-                'http_errors' => false // No lanzar excepción en errores HTTP
-            ]);
-
-            $statusCode = $loResponse->getStatusCode();
-            $responseBody = $loResponse->getBody()->getContents();
-            
-            Log::info('📡 Respuesta cruda de API QR:', [
-                'status_code' => $statusCode,
-                'raw_body' => $responseBody,
-                'headers' => $loResponse->getHeaders()
-            ]);
-
-            // Intentar decodificar JSON
-            $laResult = json_decode($responseBody);
-            $jsonError = json_last_error();
-            
-            Log::info('🔍 Análisis de respuesta JSON:', [
-                'json_decode_result' => $laResult,
-                'json_error' => $jsonError,
-                'json_error_msg' => json_last_error_msg(),
-                'is_object' => is_object($laResult),
-                'object_vars' => is_object($laResult) ? get_object_vars($laResult) : null
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Prueba API QR completada - revisa logs para detalles',
-                'status_code' => $statusCode,
-                'raw_response' => $responseBody,
-                'decoded_response' => $laResult,
-                'json_error' => $jsonError === JSON_ERROR_NONE ? 'No error' : json_last_error_msg(),
-                'request_sent' => $laBody
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('❌ Error en testApiQR:', [
-                'message' => $e->getMessage(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage(),
-                'line' => $e->getLine()
-            ], 500);
+        if (!$venta) {
+            return response()->json(['error' => 'Venta no encontrada'], 404);
         }
+
+        // Obtener el usuario
+        $usuario = User::find($venta->id_usuario);
+
+        // Obtener el pago (opcional)
+        $pago = Pago::where('id_venta', $venta->id)->first();
+
+        // Preparar respuesta
+        return response()->json([
+            'venta' => $venta,
+            'detalle' => $venta->detalleVenta,  // Aquí accedemos a la relación
+            'usuario' => $usuario,
+            'pago' => $pago
+        ]);
+    } catch (\Exception $e) {
+        Log::error('Error al obtener comprobante: ' . $e->getMessage());
+        return response()->json(['error' => 'Error interno del servidor'], 500);
     }
+}
+
 }
